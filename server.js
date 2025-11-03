@@ -10,9 +10,10 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 const whitelist = [
-    'http://127.0.0.1:5500',
-    'http://localhost:5500',
-    'https://www.colinamultitec.site'
+  'http://127.0.0.1:5500',
+  'http://localhost:5500',
+  'https://colinamultitec.site',
+  'https://www.colinamultitec.site'
 ];
 
 const corsOptions = {
@@ -743,4 +744,5 @@ async function startServer() {
 }
 
 startServer();
+
 
