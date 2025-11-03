@@ -749,21 +749,8 @@ app.put('/colaboradores/:cpf', async (req, res) => {
     }
 });
 
-async function startServer() {
-    try { 		
-        pool = mysql.createPool(dbConfig);
-        await pool.query('SELECT 1');
-        console.log('Conectado ao MySQL!');
+module.exports = app;
 
-        app.listen(PORT, () => {
-        });
-    } catch (err) {
-        console.error('Falha CRÍTICA ao conectar com o MySQL na inicialização:', err);
-        process.exit(1);
-    }
-}
-
-startServer();
 
 
 
