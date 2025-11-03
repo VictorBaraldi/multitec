@@ -13,24 +13,24 @@ app.use(express.json());
 
 // ✅ Lista de origens permitidas
 const whitelist = [
-  'http://127.0.0.1:5500',
-  'http://localhost:5500',
-  'https://colinamultitec.site',
-  'https://www.colinamultitec.site'
+  'http://127.0.0.1:5500',
+  'http://localhost:5500',
+  'https://colinamultitec.site',
+  'https://www.colinamultitec.site'
 ];
 
 // ✅ Configuração segura de CORS
 const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin || whitelist.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.warn(`🚫 Origem bloqueada pelo CORS: ${origin}`);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  origin: function (origin, callback) {
+    if (!origin || whitelist.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`🚫 Origem bloqueada pelo CORS: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 };
 
 // ✅ Aplica CORS a todas as rotas
@@ -41,23 +41,26 @@ app.options('*', cors(corsOptions));
 
 // 🔹 Teste de rota simples (opcional)
 app.get('/', (req, res) => {
-  res.send('API Colina Multitec rodando com CORS configurado corretamente ✅');
+  res.send('API Colina Multitec rodando com CORS configurado corretamente ✅');
 });
 
 
-
+// --- MUDANÇA IMPORTANTE 1: INICIALIZAÇÃO DO BANCO ---
+// O dbConfig e o pool são criados aqui no escopo global.
 const dbConfig = {
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
 };
 
-let pool;
-
+// A variável 'let pool' foi removida e substituída por esta 'const pool'
+// Isso garante que o 'pool' esteja sempre disponível para as rotas.
+const pool = mysql.createPool(dbConfig);
+// --- FIM DA MUDANÇA ---
 app.post('/login', async (req, res) => {
     const { email, senha } = req.body;
     if (!email || !senha) {
@@ -761,6 +764,7 @@ async function startServer() {
 }
 
 startServer();
+
 
 
 
