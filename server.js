@@ -9,33 +9,52 @@ const { enviarEmailAbertura, enviarEmailStatus } = require('./email');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// 🔹 Domínios permitidos
 const whitelist = [
-    'http://127.0.0.1:5500',
-    'http://localhost:5500',
-    'https://www.colinamultitec.site'
+  'http://127.0.0.1:5500',
+  'http://localhost:5500',
+  'https://www.colinamultitec.site'
 ];
 
+// 🔹 Configuração do CORS com log para debug
 const corsOptions = {
-    origin: function (origin, callback) {
-        if (whitelist.indexOf(origin) !== -1 || !origin) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
+  origin: function (origin, callback) {
+    console.log('🟡 Requisição CORS de origem:', origin);
+    if (!origin || whitelist.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn('❌ Origem bloqueada pelo CORS:', origin);
+      callback(new Error('Not allowed by CORS'));
     }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 };
 
 app.use(cors(corsOptions));
 app.use(express.json());
 
+// 🔹 Middleware extra: Define cabeçalhos de CORS manualmente (para Vercel)
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (whitelist.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  next();
+});
+
+// 🔹 Configuração do banco
 const dbConfig = {
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
 };
 
 let pool;
@@ -743,4 +762,5 @@ async function startServer() {
 }
 
 startServer();
+
 
