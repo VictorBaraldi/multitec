@@ -9,7 +9,23 @@ const { enviarEmailAbertura, enviarEmailStatus } = require('./email');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+const whitelist = [
+    'http://127.0.0.1:5500',
+    'http://localhost:5500',
+    'https://www.colinamultitec.site'
+];
+
+const corsOptions = {
+    origin: function (origin, callback) {
+        if (whitelist.indexOf(origin) !== -1 || !origin) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    }
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 const dbConfig = {
