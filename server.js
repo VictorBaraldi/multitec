@@ -9,7 +9,24 @@ const { enviarEmailAbertura, enviarEmailStatus } = require('./email');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+const whitelist = [
+    'http://127.0.0.1:5500',
+    'http://localhost:5500',
+    'https://colinamultitec.site',
+    'https://www.colinamultitec.site'
+];
+
+const corsOptions = {
+    origin: function (origin, callback) {
+        if (whitelist.indexOf(origin) !== -1 || !origin) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    }
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 const dbConfig = {
@@ -713,7 +730,7 @@ app.put('/colaboradores/:cpf', async (req, res) => {
 });
 
 async function startServer() {
-    try {       
+    try { 		
         pool = mysql.createPool(dbConfig);
         await pool.query('SELECT 1');
         console.log('Conectado ao MySQL!');
