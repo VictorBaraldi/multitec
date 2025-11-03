@@ -9,32 +9,42 @@ const { enviarEmailAbertura, enviarEmailStatus } = require('./email');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const whitelist = [
-    'http://127.0.0.1:5500',
-    'http://localhost:5500',
-    'https://colinamultitec.site',
-    'https://www.colinamultitec.site'
-];
-
-const corsOptions = {
-    origin: function (origin, callback) {
-        if (whitelist.indexOf(origin) !== -1 || !origin) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
-    }
-};
-
-app.use(cors(corsOptions));
 app.use(express.json());
 
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'http://127.0.0.1:5500');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  next();
+// ✅ Lista de origens permitidas
+const whitelist = [
+  'http://127.0.0.1:5500',
+  'http://localhost:5500',
+  'https://colinamultitec.site',
+  'https://www.colinamultitec.site'
+];
+
+// ✅ Configuração segura de CORS
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || whitelist.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`🚫 Origem bloqueada pelo CORS: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+// ✅ Aplica CORS a todas as rotas
+app.use(cors(corsOptions));
+
+// ✅ Trata requisições pré-flight (OPTIONS)
+app.options('*', cors(corsOptions));
+
+// 🔹 Teste de rota simples (opcional)
+app.get('/', (req, res) => {
+  res.send('API Colina Multitec rodando com CORS configurado corretamente ✅');
 });
+
+
 
 const dbConfig = {
     host: process.env.DB_HOST,
@@ -751,5 +761,6 @@ async function startServer() {
 }
 
 startServer();
+
 
 
