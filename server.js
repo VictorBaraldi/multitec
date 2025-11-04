@@ -16,7 +16,9 @@ const whitelist = [
   'http://127.0.0.1:5500',
   'http://localhost:5500',
   'https://colinamultitec.site',
-  'https://www.colinamultitec.site'
+  'https://colinamultitec.site/', 
+  'https://www.colinamultitec.site',
+  'https://www.colinamultitec.site/' 
 ];
 
 // ✅ Configuração segura de CORS
@@ -750,6 +752,7 @@ app.put('/colaboradores/:cpf', async (req, res) => {
 });
 
 module.exports = app;
+
 
 
 
