@@ -9,6 +9,10 @@ const { enviarEmailAbertura, enviarEmailStatus } = require('./email');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Log de inicialização
+console.log('🚀 Iniciando servidor...');
+console.log('🌍 Ambiente:', process.env.NODE_ENV || 'development');
+
 // ========================================
 // 🔧 CONFIGURAÇÃO DE CORS OTIMIZADA
 // ========================================
@@ -115,6 +119,28 @@ pool.getConnection()
   .catch(err => {
     console.error('❌ Erro ao conectar no MySQL:', err.message);
   });
+
+// ========================================
+// 🛣️ ROTAS DA API
+// ========================================
+
+// Rota de teste
+app.get('/', (req, res) => {
+  res.json({
+    message: 'API Colina Multitec rodando com CORS configurado corretamente ✅',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Rota de health check
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    uptime: process.uptime(),
+    database: 'connected'
+  });
+});
 
 app.post('/login', async (req, res) => {
     const { email, senha } = req.body;
@@ -805,6 +831,7 @@ app.put('/colaboradores/:cpf', async (req, res) => {
 });
 
 module.exports = app;
+
 
 
 
