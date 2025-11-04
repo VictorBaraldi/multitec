@@ -9,138 +9,37 @@ const { enviarEmailAbertura, enviarEmailStatus } = require('./email');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Log de inicialização
-console.log('🚀 Iniciando servidor...');
-console.log('🌍 Ambiente:', process.env.NODE_ENV || 'development');
-
-// ========================================
-// 🔧 CONFIGURAÇÃO DE CORS OTIMIZADA
-// ========================================
-
-// Lista de origens permitidas (incluindo domínios da Vercel)
 const whitelist = [
-  'http://127.0.0.1:5500',
-  'http://localhost:5500',
-  'http://localhost:3000',
-  'https://colinamultitec.site',
-  'https://www.colinamultitec.site',
-  // Adicione TODAS as URLs da Vercel que você usa
-  'https://multitec-4id5w4wog-victorbaraldis-projects.vercel.app',
-  /\.vercel\.app$/ // Aceita qualquer preview deployment do Vercel
+    'http://127.0.0.1:5500',
+    'http://localhost:5500',
+    'https://colinamultitec.site',
+    'https://www.colinamultitec.site'
 ];
 
 const corsOptions = {
-  origin: function (origin, callback) {
-    // Permite requisições sem origin (Postman, curl, server-to-server)
-    if (!origin) {
-      return callback(null, true);
+    origin: function (origin, callback) {
+        if (whitelist.indexOf(origin) !== -1 || !origin) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
     }
-
-    // Verifica se a origem está na whitelist (incluindo regex)
-    const isWhitelisted = whitelist.some(allowed => {
-      if (allowed instanceof RegExp) {
-        return allowed.test(origin);
-      }
-      return allowed === origin;
-    });
-
-    if (isWhitelisted) {
-      callback(null, true);
-    } else {
-      console.warn(`🚫 Origem bloqueada pelo CORS: ${origin}`);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  credentials: true,
-  optionsSuccessStatus: 200,
-  maxAge: 86400 // Cache de preflight por 24h
 };
 
-// Aplica CORS globalmente (ANTES de qualquer rota)
 app.use(cors(corsOptions));
-
-// Handler para requisições OPTIONS (preflight)
-app.options('*', cors(corsOptions));
-
-// Middleware adicional para garantir headers CORS na Vercel
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  
-  if (origin) {
-    const isWhitelisted = whitelist.some(allowed => {
-      if (allowed instanceof RegExp) return allowed.test(origin);
-      return allowed === origin;
-    });
-
-    if (isWhitelisted) {
-      res.header('Access-Control-Allow-Origin', origin);
-      res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-      res.header('Access-Control-Allow-Credentials', 'true');
-    }
-  }
-  
-  // Responde imediatamente para requisições OPTIONS
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
-  
-  next();
-});
-
-// Middleware para JSON (APÓS o CORS)
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// ========================================
-// 🗄️ CONFIGURAÇÃO DO BANCO DE DADOS
-// ========================================
 
 const dbConfig = {
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
 };
 
-const pool = mysql.createPool(dbConfig);
-
-// Teste de conexão com o banco
-pool.getConnection()
-  .then(connection => {
-    console.log('✅ Conectado ao MySQL com sucesso!');
-    connection.release();
-  })
-  .catch(err => {
-    console.error('❌ Erro ao conectar no MySQL:', err.message);
-  });
-
-// ========================================
-// 🛣️ ROTAS DA API
-// ========================================
-
-// Rota de teste
-app.get('/', (req, res) => {
-  res.json({
-    message: 'API Colina Multitec rodando com CORS configurado corretamente ✅',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
-  });
-});
-
-// Rota de health check
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
-    uptime: process.uptime(),
-    database: 'connected'
-  });
-});
+let pool;
 
 app.post('/login', async (req, res) => {
     const { email, senha } = req.body;
@@ -167,17 +66,17 @@ app.post('/login', async (req, res) => {
 
             if (senhaValida) {
                 const permissoes = {
-                    acesso_cadastro_cliente: usuario.acesso_cadastro_cliente[0] === 1,
-                    acesso_cadastro_colaborador: usuario.acesso_cadastro_colaborador[0] === 1,
-                    acesso_cadastro_servico: usuario.acesso_cadastro_servico[0] === 1,
-                    ver_manutencao_cliente: usuario.ver_manutencao_cliente[0] === 1,
-                    editar_manutencao_cliente: usuario.editar_manutencao_cliente[0] === 1,
-                    ver_manutencao_colaborador: usuario.ver_manutencao_colaborador[0] === 1,
-                    editar_manutencao_colaborador: usuario.editar_manutencao_colaborador[0] === 1,
-                    ver_manutencao_servico: usuario.ver_manutencao_servico[0] === 1,
-                    editar_manutencao_servico: usuario.editar_manutencao_servico[0] === 1,
-                    ver_manutencao_cargo: usuario.ver_manutencao_cargo[0] === 1,
-                    editar_manutencao_cargo: usuario.editar_manutencao_cargo[0] === 1
+                    acesso_cadastro_cliente: usuario.acesso_cadastro_cliente === 1,
+                    acesso_cadastro_colaborador: usuario.acesso_cadastro_colaborador === 1,
+                    acesso_cadastro_servico: usuario.acesso_cadastro_servico === 1,
+                    ver_manutencao_cliente: usuario.ver_manutencao_cliente === 1,
+                    editar_manutencao_cliente: usuario.editar_manutencao_cliente === 1,
+                    ver_manutencao_colaborador: usuario.ver_manutencao_colaborador === 1,
+                    editar_manutencao_colaborador: usuario.editar_manutencao_colaborador === 1,
+                    ver_manutencao_servico: usuario.ver_manutencao_servico === 1,
+                    editar_manutencao_servico: usuario.editar_manutencao_servico === 1,
+                    ver_manutencao_cargo: usuario.ver_manutencao_cargo === 1,
+                    editar_manutencao_cargo: usuario.editar_manutencao_cargo === 1
                 };
                 res.json({
                     success: true, message: 'Login bem-sucedido!',
@@ -416,17 +315,17 @@ app.get('/cargos', async (req, res) => {
         
         const cargosFormatados = rows.map(cargo => ({
             ...cargo,
-            acesso_cadastro_cliente: cargo.acesso_cadastro_cliente[0] === 1,
-            acesso_cadastro_colaborador: cargo.acesso_cadastro_colaborador[0] === 1,
-            acesso_cadastro_servico: cargo.acesso_cadastro_servico[0] === 1,
-            ver_manutencao_cliente: cargo.ver_manutencao_cliente[0] === 1,
-            editar_manutencao_cliente: cargo.editar_manutencao_cliente[0] === 1,
-            ver_manutencao_colaborador: cargo.ver_manutencao_colaborador[0] === 1,
-            editar_manutencao_colaborador: cargo.editar_manutencao_colaborador[0] === 1,
-            ver_manutencao_servico: cargo.ver_manutencao_servico[0] === 1,
-            editar_manutencao_servico: cargo.editar_manutencao_servico[0] === 1,
-            ver_manutencao_cargo: cargo.ver_manutencao_cargo[0] === 1,
-            editar_manutencao_cargo: cargo.editar_manutencao_cargo[0] === 1
+            acesso_cadastro_cliente: cargo.acesso_cadastro_cliente === 1,
+            acesso_cadastro_colaborador: cargo.acesso_cadastro_colaborador === 1,
+            acesso_cadastro_servico: cargo.acesso_cadastro_servico === 1,
+            ver_manutencao_cliente: cargo.ver_manutencao_cliente === 1,
+            editar_manutencao_cliente: cargo.editar_manutencao_cliente === 1,
+            ver_manutencao_colaborador: cargo.ver_manutencao_colaborador === 1,
+            editar_manutencao_colaborador: cargo.editar_manutencao_colaborador === 1,
+            ver_manutencao_servico: cargo.ver_manutencao_servico === 1,
+            editar_manutencao_servico: cargo.editar_manutencao_servico === 1,
+            ver_manutencao_cargo: cargo.ver_manutencao_cargo === 1,
+            editar_manutencao_cargo: cargo.editar_manutencao_cargo === 1
         }));
         
         res.json({ success: true, cargos: cargosFormatados });
@@ -830,12 +729,18 @@ app.put('/colaboradores/:cpf', async (req, res) => {
     }
 });
 
-module.exports = app;
+async function startServer() {
+    try { 		
+        pool = mysql.createPool(dbConfig);
+        await pool.query('SELECT 1');
+        console.log('Conectado ao MySQL!');
 
+        app.listen(PORT, () => {
+        });
+    } catch (err) {
+        console.error('Falha CRÍTICA ao conectar com o MySQL na inicialização:', err);
+        process.exit(1);
+    }
+}
 
-
-
-
-
-
-
+startServer();
