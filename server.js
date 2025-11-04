@@ -9,60 +9,113 @@ const { enviarEmailAbertura, enviarEmailStatus } = require('./email');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(express.json());
+// ========================================
+// 🔧 CONFIGURAÇÃO DE CORS OTIMIZADA
+// ========================================
 
-// ✅ Lista de origens permitidas
+// Lista de origens permitidas (incluindo domínios da Vercel)
 const whitelist = [
-  'http://127.0.0.1:5500',
-  'http://localhost:5500',
-  'https://colinamultitec.site',
-  'https://colinamultitec.site/', 
-  'https://www.colinamultitec.site',
-  'https://www.colinamultitec.site/' 
+  'http://127.0.0.1:5500',
+  'http://localhost:5500',
+  'http://localhost:3000',
+  'https://colinamultitec.site',
+  'https://www.colinamultitec.site',
+  // Adicione TODAS as URLs da Vercel que você usa
+  'https://multitec-4id5w4wog-victorbaraldis-projects.vercel.app',
+  /\.vercel\.app$/ // Aceita qualquer preview deployment do Vercel
 ];
 
-// ✅ Configuração segura de CORS
 const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin || whitelist.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.warn(`🚫 Origem bloqueada pelo CORS: ${origin}`);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  origin: function (origin, callback) {
+    // Permite requisições sem origin (Postman, curl, server-to-server)
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    // Verifica se a origem está na whitelist (incluindo regex)
+    const isWhitelisted = whitelist.some(allowed => {
+      if (allowed instanceof RegExp) {
+        return allowed.test(origin);
+      }
+      return allowed === origin;
+    });
+
+    if (isWhitelisted) {
+      callback(null, true);
+    } else {
+      console.warn(`🚫 Origem bloqueada pelo CORS: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  credentials: true,
+  optionsSuccessStatus: 200,
+  maxAge: 86400 // Cache de preflight por 24h
 };
 
-// ✅ Aplica CORS a todas as rotas
+// Aplica CORS globalmente (ANTES de qualquer rota)
 app.use(cors(corsOptions));
 
-// ✅ Trata requisições pré-flight (OPTIONS)
+// Handler para requisições OPTIONS (preflight)
 app.options('*', cors(corsOptions));
 
-// 🔹 Teste de rota simples (opcional)
-app.get('/', (req, res) => {
-  res.send('API Colina Multitec rodando com CORS configurado corretamente ✅');
+// Middleware adicional para garantir headers CORS na Vercel
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  
+  if (origin) {
+    const isWhitelisted = whitelist.some(allowed => {
+      if (allowed instanceof RegExp) return allowed.test(origin);
+      return allowed === origin;
+    });
+
+    if (isWhitelisted) {
+      res.header('Access-Control-Allow-Origin', origin);
+      res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+      res.header('Access-Control-Allow-Credentials', 'true');
+    }
+  }
+  
+  // Responde imediatamente para requisições OPTIONS
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  
+  next();
 });
 
+// Middleware para JSON (APÓS o CORS)
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// --- MUDANÇA IMPORTANTE 1: INICIALIZAÇÃO DO BANCO ---
-// O dbConfig e o pool são criados aqui no escopo global.
+// ========================================
+// 🗄️ CONFIGURAÇÃO DO BANCO DE DADOS
+// ========================================
+
 const dbConfig = {
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
 };
 
-// A variável 'let pool' foi removida e substituída por esta 'const pool'
-// Isso garante que o 'pool' esteja sempre disponível para as rotas.
 const pool = mysql.createPool(dbConfig);
-// --- FIM DA MUDANÇA ---
+
+// Teste de conexão com o banco
+pool.getConnection()
+  .then(connection => {
+    console.log('✅ Conectado ao MySQL com sucesso!');
+    connection.release();
+  })
+  .catch(err => {
+    console.error('❌ Erro ao conectar no MySQL:', err.message);
+  });
+
 app.post('/login', async (req, res) => {
     const { email, senha } = req.body;
     if (!email || !senha) {
@@ -752,6 +805,7 @@ app.put('/colaboradores/:cpf', async (req, res) => {
 });
 
 module.exports = app;
+
 
 
 
